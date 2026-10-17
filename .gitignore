@@ -1,0 +1,9 @@
+# Never commit real Actuate artifacts or report data
+*.rod
+*.rox
+*.roi
+*.rol
+*.iob
+*.rov
+*.jasper
+.DS_Store
