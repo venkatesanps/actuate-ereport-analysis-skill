@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Demonstrates the Actuate -> JasperReports migration patterns:
+    * Dynamic layout  : show/hide Cost & Margin columns (printWhenExpression)
+                        + two different detail layouts chosen by $P{viewMode}
+    * Page-level sec   : Cost/Margin and the FINANCE summary band are gated by
+                        $P{userRoles}; the DATA for them is also stripped in Java
+                        (see RunDemo) so non-FINANCE users can't see it even in
+                        the exported source.
+-->
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="sales_report" pageWidth="595" pageHeight="842"
+              columnWidth="555" leftMargin="20" rightMargin="20"
+              topMargin="20" bottomMargin="20" uuid="a1b2c3d4-0001-0001-0001-000000000001">
+
+  <parameter name="reportTitle" class="java.lang.String"/>
+  <parameter name="viewMode"    class="java.lang.String"/>   <!-- DETAIL | SUMMARY -->
+  <parameter name="showCost"    class="java.lang.Boolean"/>
+  <parameter name="userRoles"   class="java.util.Collection"/>
+
+  <field name="region"  class="java.lang.String"/>
+  <field name="product" class="java.lang.String"/>
+  <field name="units"   class="java.lang.Integer"/>
+  <field name="revenue" class="java.math.BigDecimal"/>
+  <field name="cost"    class="java.math.BigDecimal"/>
+  <field name="margin"  class="java.math.BigDecimal"/>
+
+  <variable name="totalRevenue" class="java.math.BigDecimal" calculation="Sum">
+    <variableExpression><![CDATA[$F{revenue}]]></variableExpression>
+  </variable>
+  <variable name="totalMargin" class="java.math.BigDecimal" calculation="Sum">
+    <variableExpression><![CDATA[$F{margin}]]></variableExpression>
+  </variable>
+
+  <title>
+    <band height="56">
+      <textField>
+        <reportElement x="0" y="0" width="555" height="26"/>
+        <textElement><font size="16" isBold="true"/></textElement>
+        <textFieldExpression><![CDATA[$P{reportTitle}]]></textFieldExpression>
+      </textField>
+      <textField isBlankWhenNull="true">
+        <reportElement x="0" y="30" width="555" height="16" forecolor="#555555"/>
+        <textElement><font size="9"/></textElement>
+        <textFieldExpression><![CDATA[
+          "View: " + $P{viewMode}
+          + "   |   Roles: " + ($P{userRoles} == null ? "[]" : $P{userRoles}.toString())
+          + "   |   Cost columns: " + (Boolean.TRUE.equals($P{showCost}) ? "on" : "off")
+        ]]></textFieldExpression>
+      </textField>
+    </band>
+  </title>
+
+  <columnHeader>
+    <band height="20">
+      <printWhenExpression><![CDATA[$P{viewMode}.equals("DETAIL")]]></printWhenExpression>
+      <staticText><reportElement x="0"   y="0" width="90"  height="20" backcolor="#EEEEEE" mode="Opaque"/><textElement><font isBold="true"/></textElement><text><![CDATA[Region]]></text></staticText>
+      <staticText><reportElement x="90"  y="0" width="150" height="20" backcolor="#EEEEEE" mode="Opaque"/><textElement><font isBold="true"/></textElement><text><![CDATA[Product]]></text></staticText>
+      <staticText><reportElement x="240" y="0" width="70"  height="20" backcolor="#EEEEEE" mode="Opaque"/><textElement textAlignment="Right"><font isBold="true"/></textElement><text><![CDATA[Units]]></text></staticText>
+      <staticText><reportElement x="310" y="0" width="90"  height="20" backcolor="#EEEEEE" mode="Opaque"/><textElement textAlignment="Right"><font isBold="true"/></textElement><text><![CDATA[Revenue]]></text></staticText>
+      <staticText>
+        <reportElement x="400" y="0" width="75" height="20" backcolor="#EEEEEE" mode="Opaque">
+          <printWhenExpression><![CDATA[Boolean.TRUE.equals($P{showCost}) && $P{userRoles} != null && $P{userRoles}.contains("FINANCE")]]></printWhenExpression>
+        </reportElement>
+        <textElement textAlignment="Right"><font isBold="true"/></textElement><text><![CDATA[Cost]]></text>
+      </staticText>
+      <staticText>
+        <reportElement x="475" y="0" width="80" height="20" backcolor="#EEEEEE" mode="Opaque">
+          <printWhenExpression><![CDATA[Boolean.TRUE.equals($P{showCost}) && $P{userRoles} != null && $P{userRoles}.contains("FINANCE")]]></printWhenExpression>
+        </reportElement>
+        <textElement textAlignment="Right"><font isBold="true"/></textElement><text><![CDATA[Margin]]></text>
+      </staticText>
+    </band>
+  </columnHeader>
+
+  <detail>
+    <!-- Layout variant 1: DETAIL (full grid) -->
+    <band height="18">
+      <printWhenExpression><![CDATA[$P{viewMode}.equals("DETAIL")]]></printWhenExpression>
+      <textField><reportElement x="0"   y="0" width="90"  height="18"/><textFieldExpression><![CDATA[$F{region}]]></textFieldExpression></textField>
+      <textField><reportElement x="90"  y="0" width="150" height="18"/><textFieldExpression><![CDATA[$F{product}]]></textFieldExpression></textField>
+      <textField><reportElement x="240" y="0" width="70"  height="18"/><textElement textAlignment="Right"/><textFieldExpression><![CDATA[$F{units}]]></textFieldExpression></textField>
+      <textField pattern="#,##0.00"><reportElement x="310" y="0" width="90" height="18"/><textElement textAlignment="Right"/><textFieldExpression><![CDATA[$F{revenue}]]></textFieldExpression></textField>
+      <textField pattern="#,##0.00" isBlankWhenNull="true">
+        <reportElement x="400" y="0" width="75" height="18">
+          <printWhenExpression><![CDATA[Boolean.TRUE.equals($P{showCost}) && $P{userRoles} != null && $P{userRoles}.contains("FINANCE")]]></printWhenExpression>
+        </reportElement>
+        <textElement textAlignment="Right"/><textFieldExpression><![CDATA[$F{cost}]]></textFieldExpression>
+      </textField>
+      <textField pattern="#,##0.00" isBlankWhenNull="true">
+        <reportElement x="475" y="0" width="80" height="18">
+          <printWhenExpression><![CDATA[Boolean.TRUE.equals($P{showCost}) && $P{userRoles} != null && $P{userRoles}.contains("FINANCE")]]></printWhenExpression>
+        </reportElement>
+        <textElement textAlignment="Right"/><textFieldExpression><![CDATA[$F{margin}]]></textFieldExpression>
+      </textField>
+    </band>
+
+    <!-- Layout variant 2: SUMMARY (compact, different arrangement) -->
+    <band height="22">
+      <printWhenExpression><![CDATA[$P{viewMode}.equals("SUMMARY")]]></printWhenExpression>
+      <textField>
+        <reportElement x="20" y="0" width="330" height="22"/>
+        <textElement verticalAlignment="Middle"><font size="11"/></textElement>
+        <textFieldExpression><![CDATA[$F{product} + "  (" + $F{region} + ")"]]></textFieldExpression>
+      </textField>
+      <textField pattern="#,##0.00">
+        <reportElement x="350" y="0" width="205" height="22"/>
+        <textElement textAlignment="Right" verticalAlignment="Middle"><font size="11" isBold="true"/></textElement>
+        <textFieldExpression><![CDATA[$F{revenue}]]></textFieldExpression>
+      </textField>
+    </band>
+  </detail>
+
+  <summary>
+    <band height="70">
+      <line><reportElement x="0" y="2" width="555" height="1"/></line>
+      <staticText><reportElement x="240" y="6" width="70" height="18"/><textElement textAlignment="Right"><font isBold="true"/></textElement><text><![CDATA[TOTAL]]></text></staticText>
+      <textField pattern="#,##0.00">
+        <reportElement x="310" y="6" width="90" height="18"/>
+        <textElement textAlignment="Right"><font isBold="true"/></textElement>
+        <textFieldExpression><![CDATA[$V{totalRevenue}]]></textFieldExpression>
+      </textField>
+
+      <!-- FINANCE-only section: gated by role (visual) AND margin data is null
+           for non-FINANCE users (data-level), so nothing leaks either way. -->
+      <staticText>
+        <reportElement x="0" y="34" width="555" height="16" forecolor="#8800AA">
+          <printWhenExpression><![CDATA[$P{userRoles} != null && $P{userRoles}.contains("FINANCE")]]></printWhenExpression>
+        </reportElement>
+        <textElement><font size="10" isBold="true"/></textElement>
+        <text><![CDATA[FINANCE ONLY — Profitability]]></text>
+      </staticText>
+      <textField>
+        <reportElement x="0" y="50" width="555" height="16">
+          <printWhenExpression><![CDATA[$P{userRoles} != null && $P{userRoles}.contains("FINANCE")]]></printWhenExpression>
+        </reportElement>
+        <textFieldExpression><![CDATA["Total margin: " + ($V{totalMargin} == null ? "n/a" : $V{totalMargin})]]></textFieldExpression>
+      </textField>
+    </band>
+  </summary>
+</jasperReport>
